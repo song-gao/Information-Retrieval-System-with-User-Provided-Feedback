@@ -11,7 +11,7 @@ def information_retrieve(precision, total_docs):
   # the major functionality requiring user interactions
   stop_word = get_stop_word("stop_word.txt")
 
-  input = raw_input('Type the word you want to search, separated by space')
+  input = raw_input('Type the word you want to search, separated by space:\n')
   query = parse_first_query_to_dictionary(input)
   results = get_search_result(input)
   while True:
@@ -123,8 +123,9 @@ def get_stop_word(file_name):
   return stop_word
 
 def get_search_result(search_content):
+  search_content_encode = search_content.replace(' ','%20')
   bingUrl = "https://api.datamarket.azure.com/Bing/Search/Web?Query=%27"\
-            +search_content\
+            +search_content_encode\
             +"%27&$top=10&$format=json"
   #Provide your account key here
   accountKey = "y/Le5zhlILnVq7+cJiEE/2adH7pL7s7kpNAkZ/mxLt0"
@@ -140,12 +141,12 @@ def get_search_result(search_content):
 def show_search_result(results):
   index = 1
   for entry in results:
-    print "{} : {}".format(index, entry['Title'])
-    print entry['Description']
+    print "{} : {}".format(index, entry['Title'].encode('utf8'))
+    print entry['Description'].encode('utf8')
     index += 1
 
 def get_user_rating():
-  input = raw_input("Input all relevant entry number, separated by space: ")
+  input = raw_input("Input all relevant entry number, separated by space:\n")
   list = input.split()
   results = map(int, list)
   return results
