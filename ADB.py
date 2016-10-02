@@ -5,6 +5,7 @@ import json
 from pprint import pprint
 import heapq
 import math
+import sys
 
 def information_retrieve(precision, total_docs):
   # the major functionality requiring user interactions
@@ -65,8 +66,8 @@ def get_next_query_vector(q_pre, relevance_index, docs, stop_word, total_docs, a
   dummy_list = list()
   dummy_list.add(q_pre) # make sure q_pre has all the keys from the dictionary 
   q = dictionary_summation(dummy_list, alpha,
-      relevance_vectors, beta/len(relevance_index),
-      irrelevance_vectors, -gamma/(total_docs-len(relevance_index)))
+      vector_list_summation(relevance_vectors), beta/len(relevance_index),
+      vector_list_summation(irrelevance_vectors), -gamma/(total_docs-len(relevance_index)))
   return q
 
 def normalize(vector):
@@ -93,10 +94,12 @@ def vector_list_summation(vector_list, dictionary):
   for w in dictionary:
     summation[w] = 0
     for vector in vector_list:
-      summation_vector[w] += vector[w] if w in vector
+      summation_vector[w] += (vector[w] if w in vector else 0)
+      #summation_vector[w] += [vector[w],0][w in vector]
+        
   return summation_vector
 
-def dictionary_summation(dict1, coefficient1, dict2, coefficient2, dict3, coefficient3, dict3, dictionary):
+def dictionary_summation(dict1, coefficient1, dict2, coefficient2, dict3, coefficient3, dictionary):
   res = dict()
   for w in dictionary:
     res[w] = 0
@@ -114,7 +117,7 @@ def dictionary_summation(dict1, coefficient1, dict2, coefficient2, dict3, coeffi
 
 def get_stop_word(file_name):
   stop_word = set()
-  with open(...) as f:
+  with open(file_name) as f:
     for line in f:
         stop_word.add(line)
   return stop_word
@@ -166,17 +169,16 @@ def parse_first_query_to_dictionary(string):
 
 if __name__ == "__main__":
 
-  if len(sys.argv) != 2:
-      usage()
+  if len(sys.argv) != 3:
+      print "Should pass exactly 2 arguments: precision and total_docs"
       sys.exit(1)
-  precision = sys.argv[0]
-  total_docs = sys.argv[1]
+  precision = float(sys.argv[1])
+  total_docs = int(sys.argv[2])
 
-  if precision <= 0 or prcision >= 1:
+  if precision <= 0 or precision >= 1:
       print "Precision must be a number between 0 and 1"
-      usage()
       sys.exit(1)
-  if !isinstance( total_docs, ( int, long ) ) or total_docs <= 0:
+  if not isinstance(total_docs, (int, long)) or total_docs <= 0:
     print "total number of docs should be a positive integer"
 
   information_retrieve(precision, total_docs)
