@@ -12,26 +12,40 @@ def information_retrieve(precision, total_docs):
   stop_word = get_stop_word("stop_word.txt")
 
   input = raw_input('Type the word you want to search, separated by space:\n')
-  query = parse_first_query_to_dictionary(input)
+  query_list = input.split()
+  query = parse_query_list_to_dictionary(query_list)
   results = get_search_result(input)
+  if not results:
+    print "Find no results at the first time. Program exit..."
+    sys.exit(1)
   show_search_result(results)
   relevance_index = get_user_rating(total_docs)
   if not relevance_index:
     print "Find no qualified results at all at the first time. Program exit..."
     sys.exit(1)
   while True:
-    if len(relevance_index)/total_docs >= precision:
-      print "All results are related. Program exit..."
-      break
     # ==========================  
     # probably need to delete this one
-    if len(relevance_index) == 0:
+    if not relevance_index:
       print "Find no qualified results at all. Program exit..."
+      break
     # ==========================
+    if len(relevance_index)*1.0/total_docs >= precision:
+      print "All results are related. Program exit..."
+      break
     docs = construct_docs_from_results(results)
     query_list_next = get_next_top_query(query, relevance_index, stop_word, total_docs,docs)
+    if is_query_same_as_last(construct_query_string_from_list(query), construct_query_string_from_list(parse_query_list_to_dictionary(query_list_next))):
+      print "This query is the same as the last one. Program exit..."
+      break
+    query = parse_query_list_to_dictionary(query_list_next)
     query_string = construct_query_string_from_list(query_list_next)
+    print "The calulated query this time is: "
+    print query_string
     results = get_search_result(query_string)
+    if not results:
+      print "Find no results at this first time. Program exit..."
+      sys.exit(1)
     show_search_result(results)
     relevance_index = get_user_rating(total_docs)
 
@@ -40,7 +54,7 @@ def get_next_top_query(q_pre, relevance_index, stop_word, total_docs, docs):
   alpha = 0.9
   beta = 0.2
   gamma = 0.4
-  top_num = min(total_docs, 5)
+  top_num = min(total_docs, 3)
 
   q = get_next_query_vector(q_pre, relevance_index, docs, stop_word, total_docs, alpha, beta, gamma)
   return dict_nlargest(q, top_num)
@@ -65,18 +79,17 @@ def get_next_query_vector(q_pre, relevance_index, docs, stop_word, total_docs, a
     construct_dict_from_doc(doc, stop_word, dictionary)
     vector = construct_vector_from_doc(doc, stop_word)
     normalize(vector)
-    if i in relevance_index:
+    if i+1 in relevance_index:
       relevance_vectors.append(vector)
     else:
       irrelevance_vectors.append(vector)
-
   #calculate next q vector
   dummy_list = list()
   dummy_list.append(q_pre) # make sure q_pre has all the keys from the dictionary 
   q = dictionary_summation(
-      vector_list_summation(dummy_list, dictionary), alpha,
-      vector_list_summation(relevance_vectors, dictionary), beta/len(relevance_index),
-      vector_list_summation(irrelevance_vectors, dictionary), -gamma/(total_docs-len(relevance_index)),
+      vector_list_summation(dummy_list, dictionary), alpha*1.0,
+      vector_list_summation(relevance_vectors, dictionary), 1.0*beta/len(relevance_index),
+      vector_list_summation(irrelevance_vectors, dictionary), -1.0*gamma/(total_docs-len(relevance_index)),
       dictionary)
   return q
 
@@ -85,14 +98,14 @@ def normalize(vector):
   for key in vector:
     denominator += vector[key]*vector[key]
   for key in vector:
-    vector[key] = vector[key]/denominator
+    vector[key] = 1.0*vector[key]/denominator
 
 def construct_vector_from_doc(doc, stop_word):
-  relevance_vector = dict()
+  vector = dict()
   for w in doc:
     if w not in stop_word:
-      relevance_vector[w] = relevance_vector[w]+1 if w in relevance_vector else 1
-  return relevance_vector 
+      vector[w] = vector[w]+1 if w in vector else 1
+  return vector 
 
 def construct_dict_from_doc(doc, stop_word, set):
   for w in doc:
@@ -124,6 +137,9 @@ def dictionary_summation(dict1, coefficient1, dict2, coefficient2, dict3, coeffi
 ###################################################
 #start of helper methods for information_retrieve()
 ###################################################
+def is_query_same_as_last(query1, query2):
+  return set(query2) == (set(query1) & set(query2))
+
 def construct_query_string_from_list(list):
   return ' '.join(list)
 
@@ -131,7 +147,7 @@ def get_stop_word(file_name):
   stop_word = set()
   with open(file_name) as f:
     for line in f:
-        stop_word.add(line)
+        stop_word.add(line.rstrip())
   return stop_word
 
 def get_search_result(search_content):
@@ -166,6 +182,7 @@ def get_user_rating(total_docs):
     input = raw_input("Input all relevant entry number, separated by space:\n")
     input_list = input.split()
   results = (map(int, input_list) if input_list else list())
+  return results
 
 def is_valid_user_rating(input_list, total_docs):
   if len(input_list) == 0:
@@ -175,25 +192,12 @@ def is_valid_user_rating(input_list, total_docs):
       int(element)
     except ValueError:
       return False
-  for elememt in map(int, input_list):
+  for element in map(int, input_list):
     if element < 1 or element > total_docs:
-      print "element is {}".format(element)
-      print "element < 1 or element > {}".format(total_docs)
       return False
   return True
 
-  
-  # def is_valid_index(list, total_docs):
-  # for num in list:
-  #   if num not in range(1, total_docs+1):
-  #     return False
-  # return True
-  
-  return results
-
-
-def parse_first_query_to_dictionary(string):
-  query = string.split()
+def parse_query_list_to_dictionary(query):
   dic = dict()
   for w in query:
     dic[w] = 1
@@ -203,8 +207,8 @@ def construct_docs_from_results(results):
   docs = list()
   index = 1
   for entry in results:
-    string = entry['Title'].encode('utf8') + entry['Description'].encode('utf8')
-    doc = ''.join(c for c in string if c.isalnum() or c.isspace()).split()
+    string = entry['Title'].encode('utf8') + entry['Description'].encode('utf8').lower()
+    doc = ''.join(c for c in string if c.isalpha() or c.isspace()).split()
     index += 1
     docs.append(doc)
   return docs
