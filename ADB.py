@@ -6,12 +6,13 @@ from pprint import pprint
 import heapq
 import math
 import sys
+import re
 
 def information_retrieve(precision, total_docs):
   # the major functionality requiring user interactions
   stop_word = get_stop_word("stop_word.txt")
 
-  input = raw_input('Type the word you want to search, separated by space:\n')
+  input = raw_input('Type the word you want to search, separated by space:\n').lower()
   query_list = input.split()
   query = parse_query_list_to_dictionary(query_list)
   results = get_search_result(input)
@@ -175,11 +176,11 @@ def show_search_result(results):
   print "\n"
 
 def get_user_rating(total_docs):
-  input = raw_input("Input all relevant entry number, separated by space:\n")
+  input = raw_input("Input all relevant entry number, separated by space:\n").lower()
   input_list = input.split()
   while not is_valid_user_rating(input_list, total_docs):
     print "Invalid input! The input should be between 1 and {}".format(total_docs)
-    input = raw_input("Input all relevant entry number, separated by space:\n")
+    input = raw_input("Input all relevant entry number, separated by space:\n").lower()
     input_list = input.split()
   results = (map(int, input_list) if input_list else list())
   return results
@@ -204,11 +205,14 @@ def parse_query_list_to_dictionary(query):
   return dic
 
 def construct_docs_from_results(results):
+  regex = re.compile('[^a-zA-Z]')
   docs = list()
   index = 1
   for entry in results:
-    string = entry['Title'].encode('utf8') + entry['Description'].encode('utf8').lower()
-    doc = ''.join(c for c in string if c.isalpha() or c.isspace()).split()
+    string = (entry['Title'].encode('utf8') + entry['Description'].encode('utf8')).lower()
+    print string
+
+    doc = (''.join(c for c in string if c.isalpha() or c.isspace())).split()
     index += 1
     docs.append(doc)
   return docs
