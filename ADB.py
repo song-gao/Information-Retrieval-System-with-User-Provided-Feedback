@@ -31,7 +31,7 @@ def information_retrieve(precision, total_docs):
       break
     # ==========================
     if len(relevance_index)*1.0/total_docs >= precision:
-      print "All results are related. Program exit..."
+      print "Presicion is achieved. Program exit..."
       break
     docs = construct_docs_from_results(results)
     query_list_next = get_next_top_query(query, relevance_index, stop_word, total_docs,docs)
